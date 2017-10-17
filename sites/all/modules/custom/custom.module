@@ -1,0 +1,367 @@
+<?php
+
+function custom_entity_view( $entity, $entity_type, $view_mode, $langcode ) {
+#dpm($entity);
+ if ($entity_type == 'profile2') {
+ 
+# dpm($entity);
+
+ }
+
+
+}
+
+
+function custom_entity_insert($entity, $entity_type) {
+/*
+ if ($entity_type == 'node') {
+  if ($entity->type == 'lesson') {
+   $lesson_wrapper = entity_metadata_wrapper('node', $entity);
+   $lesson_order_id = $lesson_wrapper->field_lesson_order->value();
+   $time_begin = $lesson_order_id->field_lesson_time_begin[LANGUAGE_NONE][0]['value'];
+   $time_end = $lesson_order_id->field_lesson_time_end[LANGUAGE_NONE][0]['value'];
+   $old_time_begin = $lesson_wrapper->field_lesson_date->value()['value'];
+   $old_time_begin_date = substr($old_time_begin, 0, 10);
+   $old_time_end = $lesson_wrapper->field_lesson_date->value()['value2'];
+   $old_time_end_date  = substr($old_time_end, 0, 10);
+   $lesson_wrapper->field_lesson_date->set(
+    array('value' =>  $old_time_begin_date.' '.gmdate("H:i",$time_begin),
+          'value2' => $old_time_end_date.' '.gmdate("H:i",$time_end),
+    ));
+   field_attach_update('node', $entity);
+  }
+ }
+*/
+}
+
+
+function custom_entity_update($entity, $entity_type) {
+/*
+#dpm($entity_type);
+ if ($entity_type == 'node') {
+  if ($entity->type == 'lesson') {
+   $lesson_wrapper = entity_metadata_wrapper('node', $entity);
+   $lesson_order_id = $lesson_wrapper->field_lesson_order->value();
+   $time_begin = $lesson_order_id->field_lesson_time_begin[LANGUAGE_NONE][0]['value'];
+dpm(gmdate("H:i",$time_begin));
+   $time_end = $lesson_order_id->field_lesson_time_end[LANGUAGE_NONE][0]['value'];
+   $old_time_begin = $lesson_wrapper->field_lesson_date->value()['value'];
+   $old_time_begin_date = substr($old_time_begin, 0, 10);
+   $old_time_end = $lesson_wrapper->field_lesson_date->value()['value2'];
+   $old_time_end_date  = substr($old_time_end, 0, 10);
+   $lesson_wrapper->field_lesson_date->set(
+    array('value' =>  $old_time_begin_date.' '.gmdate("H:i",$time_begin),
+          'value2' => $old_time_end_date.' '.gmdate("H:i",$time_end),
+    ));
+   field_attach_update('node', $entity);
+  }
+ }
+*/
+}
+
+
+function custom_form_alter(&$form, &$form_state, $form_id) {
+#dpm($form_id);
+#dpm($form_state);
+#dpm($form);
+
+ if ($form_id == 'lesson_node_form') {
+
+    $form['field_lesson_class']['und']['#ajax'] = array(
+            'event' => 'change',
+            'wrapper' => 'subject-wrapper order-wrapper',
+            'callback' => 'class_subject_order_value_ajax_callback',
+            'method' => 'replace',
+    );
+    $form['field_lesson_subject']['und']['#prefix'] = '<div class="subject-wrapper">';
+    $form['field_lesson_subject']['und']['#suffix'] = '</div>';
+
+    if (!isset($form_state['values']['field_lesson_class'])) {
+     $form['field_lesson_subject']['#disabled'] = TRUE;
+     $form['field_lesson_order']['#disabled'] = TRUE;
+    }
+
+    if (!isset($form_state['values']['field_lesson_subject'])) {
+     $form['field_lesson_teacher']['#disabled'] = TRUE;
+    }
+
+
+    $form['field_lesson_order']['und']['#prefix'] = '<div class="order-wrapper">';
+    $form['field_lesson_order']['und']['#suffix'] = '</div>';
+
+    $form['field_lesson_subject']['und']['#ajax'] = array(
+            'event' => 'change',
+            'wrapper' => 'teacher-wrapper',
+            'callback' => 'subject_teacher_value_ajax_callback',
+            'method' => 'replace',
+    );
+    $form['field_lesson_teacher']['und']['#prefix'] = '<div id="teacher-wrapper">';
+    $form['field_lesson_teacher']['und']['#suffix'] = '</div>';
+
+    $form['field_lesson_order']['und']['#ajax'] = array(
+            'event' => 'change',
+            'wrapper' => 'date-wrapper',
+            'callback' => 'lesson_date_value_ajax_callback',
+            'method' => 'replace',
+    );
+    $form['field_lesson_date']['und'][0]['#after_build'][] = 'lesson_date_readonly';
+    $form['field_lesson_date']['und']['#prefix'] = '<div id="date-wrapper">';
+    $form['field_lesson_date']['und']['#suffix'] = '</div>';
+ }
+
+ if ($form_id == 'class_node_form') {
+    $all_class = $form['field_class_class']['und']['#options'];
+    foreach ($all_class as $class_tid => $class_term_name) {
+     $result = views_get_view_result('free_class_terms','default', $class_tid);
+     if (count($result) > 0) {
+       $form['field_class_class']['und'][$class_tid]['#disabled'] = TRUE;
+     }
+    }
+
+ }
+
+ if ($form_id == 'taxonomy_form_term') {
+  if ($form['#vocabulary']->name == 'Предмет') {
+
+    if (!isset($form_state['values']['field_subject_class'])) {
+       $form['field_subject_teacher']['#disabled'] = TRUE;
+     }
+ 
+    $form['field_subject_class']['und']['#ajax'] = array(
+            'event' => 'change',
+            'wrapper' => 'term-teacher-wrapper',
+            'callback' => 'term_subject_teacher_value_ajax_callback',
+            'method' => 'replace',
+    );
+    $form['field_subject_teacher']['und']['#prefix'] = '<div id="term-teacher-wrapper">';
+    $form['field_subject_teacher']['und']['#suffix'] = '</div>';
+  }
+ }
+
+/*
+ if ($form_id == 'user_profile_form') {
+dpm($form);
+
+ }
+*/
+
+}
+
+function lesson_date_readonly($element, &$form_state) {
+
+ $element['value']['date']['#attributes']['readonly'] = 'readonly';
+ $element['value2']['date']['#attributes']['readonly'] = 'readonly';
+
+ return $element;
+}
+
+
+function class_subject_order_value_ajax_callback($form, $form_state) {
+
+ unset($form['field_lesson_subject']['#attributes']['disabled']);
+ $form['field_lesson_subject']['#disabled'] = FALSE;
+ 
+ unset($form['field_lesson_teacher']['#attributes']['disabled']);
+ $form['field_lesson_teacher']['#disabled'] = FALSE;
+
+ unset($form['field_lesson_order']['#attributes']['disabled']);
+ $form['field_lesson_order']['#disabled'] = FALSE;
+
+ $class_nid = $form_state['input']['field_lesson_class']['und'];
+ $class_node = node_load($class_nid);
+ $class_node_wrapper = entity_metadata_wrapper('node', $class_node);
+ $class_term = $class_node_wrapper->field_class_class->value();
+ $class_subjects = views_get_view_result('class_subjects', 'default', $class_term->tid);
+ $subject_options['_none'] = '- Выберите значение -';
+
+ foreach($class_subjects as $item_id => $item) {
+  $subject_options[$item->tid] = $item->taxonomy_term_data_name;
+ } 
+
+ $form['field_lesson_subject']['und']['#options'] = array_intersect($form['field_lesson_subject']['und']['#options'] , $subject_options);
+ $form['field_lesson_subject']['und']['#ajax_processed'] = TRUE;
+
+ 
+ $date = substr($form_state['input']['field_lesson_date']['und'][0]['value']['date'], 0, 10);
+ $result = views_get_view_result('date_lessons','default', $class_nid, $date);
+ $occupied_tids = array();
+
+    foreach ($result as $item) {
+     $tid = $item->field_field_lesson_order[0]['raw']['tid'];
+     $term = taxonomy_term_load($tid);
+     $occupied_tids[$tid] = $term->name;
+    }
+
+ $available_tids = array_diff($form['field_lesson_order']['und']['#options'], $occupied_tids);
+ $form['field_lesson_order']['und']['#options'] = $available_tids;
+ $form['field_lesson_order']['und']['#ajax_processed'] = TRUE;
+
+ $commands = array();
+ $commands[] = ajax_command_replace('.subject-wrapper', drupal_render($form['field_lesson_subject']));
+# $commands[] = ajax_command_invoke('.subject-wrapper select', 'removeAttr', array('disabled'));
+# $commands[] = ajax_command_invoke('.subject-wrapper .form-type-select', 'removeClass', array('disabled'));
+# $commands[] = ajax_command_remove('.subject-wrapper .form-type-select', 'form-disabled');
+ $commands[] = ajax_command_replace('.order-wrapper', drupal_render($form['field_lesson_order']));
+
+
+ return array('#type' => 'ajax', '#commands' => $commands);
+
+}
+
+function subject_teacher_value_ajax_callback($form, $form_state) {
+
+ $class_nid= $form_state['input']['field_lesson_class']['und'];
+ $class_node = node_load($class_nid);
+ $class_node_wrapper = entity_metadata_wrapper('node', $class_node);
+ $class_teacher_obj = $class_node_wrapper->field_class_teacher->value();
+ if (isset($class_teacher_obj)) {
+  $class_teacher_user = user_load($class_teacher_obj->uid);
+  $form['field_lesson_teacher']['und']['#default_value'][$class_teacher_user->uid] = $class_teacher_user->realname; 
+  $teacher_options[$class_teacher_user->uid] = $class_teacher_user->realname;
+ }
+
+ $subject_tid= $form_state['input']['field_lesson_subject']['und'];
+ $lesson_teachers = views_get_view_result('subject_teacher','default', $subject_tid);
+
+ foreach($lesson_teachers as $item_id => $item) {
+  $user = user_load($item->uid);
+  $teacher_options[$user->uid] = $user->realname;
+ } 
+
+ $form['field_lesson_teacher']['und']['#options'] = array_intersect($form['field_lesson_teacher']['und']['#options'], $teacher_options);
+ $form['field_lesson_teacher']['und']['#ajax_processed'] = TRUE;
+ return $form['field_lesson_teacher'];
+
+}
+
+function term_subject_teacher_value_ajax_callback($form, $form_state) {
+
+  $class_tid = $form_state['input']['field_subject_class']['und'];
+   $result = views_get_view_result('term_class','default', $class_tid);
+   if (count($result) >0) { 
+   $class_obj = array_shift($result);
+   $class_nid = $class_obj->field_class_class_taxonomy_term_data_nid;
+   $class_node = node_load($class_nid);
+   $class_node_wrapper = entity_metadata_wrapper('node', $class_node);
+   $class_teacher_obj = $class_node_wrapper->field_class_teacher->value();
+   if (isset($class_teacher_obj)) {
+    $class_teacher_user = user_load($class_teacher_obj->uid);
+    $form['field_subject_teacher']['und']['#default_value'][$class_teacher_user->uid] = $class_teacher_user->realname; 
+    unset($form['field_subject_teacher']['und']['#options']['_none']);
+    unset($form['field_subject_teacher']['und']['#options'][$class_teacher_user->uid]);
+    $form['field_subject_teacher']['und']['#options'] = array($class_teacher_user->uid => $class_teacher_user->realname) + $form['field_subject_teacher']['und']['#options'];
+    $form['field_subject_teacher']['und']['#ajax_processed'] = TRUE;
+   }
+  }
+  return $form['field_subject_teacher'];
+
+}
+
+
+function lesson_date_value_ajax_callback($form, $form_state) {
+
+  $lesson_order_tid = $form_state['input']['field_lesson_order']['und'];
+  $lesson_order_term = taxonomy_term_load($lesson_order_tid);
+  $lesson_order_term_wrapper = entity_metadata_wrapper('taxonomy_term', $lesson_order_term);
+  $time_begin = $lesson_order_term_wrapper->field_lesson_time_begin->value();
+  $time_end = $lesson_order_term_wrapper->field_lesson_time_end->value();
+  $old_time_begin_date = $form_state['input']['field_lesson_date']['und']['0']['value']['date'];
+  $old_time_end_date  = $form_state['input']['field_lesson_date']['und']['0']['value2']['date'];
+  $form['field_lesson_date']['und']['0']['value']['date']['#value'] = str_replace('00:00',gmdate("H:i",$time_begin),$old_time_begin_date);
+  $form['field_lesson_date']['und']['0']['value2']['date']['#value'] = str_replace('00:00',gmdate("H:i",$time_end),$old_time_begin_date);
+
+  return $form['field_lesson_date'];
+}
+
+
+
+
+function custom_form_views_exposed_form_alter(&$form, &$form_state, $form_id) {
+
+ if ($form['#id'] == 'views-exposed-form-teacher-timetable-block-1') {
+  $user_uid = arg(1);
+  $result = views_get_view_result('teacher_subjects','block_1', $user_uid);
+  $options = array('All' => "Все предметы");
+  foreach ($result as $item) {
+   $tid = $item->tid;
+   $term = taxonomy_term_load($tid);
+   $options[$tid] = $term->name;
+  }
+  $form['field_lesson_subject_tid']['#options'] = $options;
+ }
+}
+
+
+
+
+
+function custom_fullcalendar_classes_alter(&$classes, $entity) {
+ $css_url = file_create_url(colors_create_css('custom'));
+ drupal_add_css($css_url, array('group' => CSS_DEFAULT, 'every_page' => TRUE));
+ $classes[] = 'colors-taxonomy-term-'.$entity->field_lesson_subject['und'][0]['tid'];
+}
+
+
+function custom_node_view($node, $view_mode, $langcode) {
+#dpm($node); 
+ $page_node = menu_get_object();
+ if ($node->type == 'advpoll') {
+  if ($node->nid != $page_node->nid) {
+    $node->title = NULL;
+  }
+ }
+}
+
+
+function custom_node_view_alter(&$build) {
+#dpm($build['#view_mode']);
+  if ($build['#view_mode'] == 'full') {
+    // remove "add comment" link from node teaser mode display
+    unset($build['links']['comment']['#links']['comment-add']);
+    // and if logged out this will cause another list item to appear, so let's get rid of that
+    unset($build['links']['comment']['#links']['comment_forbidden']);
+  }
+}
+
+function custom_cronapi($op, $job = NULL) {
+
+  $items['rename_classes'] = array(
+    'description' => 'Переименование классов',
+    'rule' => '0 0 1 8 *',
+    'callback' => 'custom_rename_classes',
+    'arguments' => array('all'),
+  );
+
+  return $items;
+}
+
+
+function custom_rename_classes($what) {
+
+ $result = views_get_view_result('renaming_classes', 'default');
+  foreach ($result as $item) {
+   $node = node_load($item->nid);
+   $node_wrapper = entity_metadata_wrapper('node', $node);
+   $class_name_term = $node_wrapper->field_class_class->value();
+   $class_name_length = iconv_strlen($class_name_term->name, 'UTF-8');
+   $class_name_number = mb_substr($class_name_term->name, 0, $class_name_length -1,'UTF-8');
+   $class_name_letter = mb_substr($class_name_term->name, $class_name_length-1, 1,'UTF-8');
+   $class_name_number = $class_name_number+1;
+   $class_new_name_term_name = $class_name_number.$class_name_letter;
+   $class_new_name_term_array = taxonomy_get_term_by_name($class_new_name_term_name);
+   $class_new_name_term = array_shift($class_new_name_term_array);
+   $node_wrapper->field_class_class = $class_new_name_term->tid;
+   $node_wrapper->title = $class_new_name_term->name;
+   $node_wrapper->save();
+  }
+ $result = views_get_view_result('inactive_class_current_year', 'default'); 
+  foreach ($result as $item) {
+   $node = node_load($item->nid);
+   $node_wrapper = entity_metadata_wrapper('node', $node);
+   $node_wrapper->field_class_active = FALSE;
+   $node_wrapper->save();
+ }
+
+}
+
+

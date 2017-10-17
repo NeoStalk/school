@@ -1,0 +1,24 @@
+<?php
+
+
+/**
+ * Implements hook_fullcalendar_api().
+ */
+function fullcalendar_fix_fullcalendar_api() {
+  return array(
+    'api' => fullcalendar_api_version(),
+  );
+}
+
+/**
+ * Implements hook_fullcalendar_options_info().
+ */
+function fullcalendar_fix_fullcalendar_options_info() {
+  return array(
+    'fullcalendar_fix' => array(
+      'js' => TRUE,
+      'no_fieldset' => TRUE,
+      'weight' => 5,
+    ),
+  );
+}

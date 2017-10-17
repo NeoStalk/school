@@ -1,0 +1,12 @@
+name = Editable Views Test
+description = Test module for Editable Views
+core = 7.x
+hidden = TRUE
+dependencies[] = editableviews
+
+; Information added by Drupal.org packaging script on 2016-09-12
+version = "7.x-1.0-beta10+1-dev"
+core = "7.x"
+project = "editableviews"
+datestamp = "1473683940"
+
